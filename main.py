@@ -68,6 +68,7 @@ def get_card_prices(cards: list[card_api.Card], check_cache: bool = True, write_
         card_hash = card.generate_hash()
         if (card_hash in old_cache):
             card.price = float(old_cache[card_hash])
+            new_cache[card_hash] = float(old_cache[card_hash])
         
         else:
             card.set_price_from_api()
