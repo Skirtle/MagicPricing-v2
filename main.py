@@ -52,16 +52,14 @@ def get_card_prices(cards: list[card_api.Card], check_cache: bool = True, write_
     today = datetime.today().strftime("%Y%m%d")
     
     # Make sure the file exists
-    file = open(cache_filename, "w")
+    file = open(cache_filename, "a")
     file.close()
     
     if (check_cache):
         with open(cache_filename, "r") as file:
             # If date is today, we can continue
             cache_date = file.readline().strip()
-            print(f"{cache_date = } {today = }")
             if (today == cache_date): # We are good to continue
-                print("We are checking the old cache now")
                 prices = [l.strip().split(",") for l in file.readlines()]
                 for price in prices:
                     old_cache[price[0]] = price[1]
@@ -75,15 +73,14 @@ def get_card_prices(cards: list[card_api.Card], check_cache: bool = True, write_
             new_cache[card_hash] = float(old_cache[card_hash])
         
         else:
+            # This is where we call the API
+            # We will also write the new price to the new_cache, only writing to file if allowed
             card.set_price_from_api()
             new_price = card.price
             new_cache[card_hash] = new_price
-            # This is where we call the API
-            # We will also write the new price to the new_cache, only writing to file if allowed
     
     # Write all the new prices to the cache
     if (write_to_cache):
-        print("We are now writing the new cache")
         with open(cache_filename, "w") as file:
             file.write(f"{today}\n")
             for hash_key in new_cache:
