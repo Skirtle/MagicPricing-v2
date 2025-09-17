@@ -51,6 +51,10 @@ def get_card_prices(cards: list[card_api.Card], check_cache: bool = True, write_
     new_cache = {}
     today = datetime.today().strftime("%Y%m%d")
     
+    # Make sure the file exists
+    file = open(cache_filename, "w")
+    file.close()
+    
     if (check_cache):
         with open(cache_filename, "r") as file:
             # If date is today, we can continue
