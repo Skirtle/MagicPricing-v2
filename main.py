@@ -1,6 +1,15 @@
-import card_api, pyodbc
+import card_api, pyodbc, argparse, logger
 from os import getcwd
 from datetime import datetime
+
+parser = argparse.ArgumentParser(prog = "Magic Card Pricing", description = "Logs the prices of Magic cards")
+parser.add_argument("--dont-read-cache", action = "store_false", default = True, help = "Do not read from prices.cache")
+parser.add_argument("--dont-write-cache", action = "store_false", default = True, help = "Do not write to prices.cache")
+parser.add_argument("-l", "--log", action = "store_true", default = False, help = "Log events to the magic.log")
+parser.add_argument("-v", "--verbose", action = "store_true", default = False, help = "Print information to the screen")
+parser.add_argument("-p", "--print-cards", action = "store_true", default = False, help = "Print the cards to screen as the price is found")
+
+args = parser.parse_args()
 
 def get_cards_from_database(filename: str, sql: str = "", autocall_api: bool = False) -> list[card_api.Card]:
     if (sql == ""): sql = "SELECT * FROM Cards"
@@ -11,11 +20,11 @@ def get_cards_from_database(filename: str, sql: str = "", autocall_api: bool = F
         directory = getcwd() + "\\"
         driverStr = r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ='
         cnxn = pyodbc.connect(driverStr + directory + filename + ";")
+        logger.log(f"Connection to {filename} opened", "LOG", "magic.log", args.log, args.verbose)
         cursor = cnxn.cursor()
         cnxn.setdecoding(pyodbc.SQL_CHAR, encoding=encoding)
         cnxn.setdecoding(pyodbc.SQL_WCHAR, encoding=encoding)
         cnxn.setencoding(encoding=encoding)
-        print(f"Opened {filename}")
     except Exception as err:
         print(err)
         return []
@@ -25,7 +34,9 @@ def get_cards_from_database(filename: str, sql: str = "", autocall_api: bool = F
     try: cursor.execute(sql)
     except Exception as err: cursor.execute("SELECT * FROM Cards")
     
+    logger.log(f"Fetching cards using {sql}", "LOG", "magic.log", args.log, args.verbose)
     rows = cursor.fetchall()
+    logger.log(f"Found {len(rows)} cards", "LOG", "magic.log", args.log, args.verbose)
     card_list = []
     
     # Create the card objects
@@ -43,6 +54,8 @@ def get_cards_from_database(filename: str, sql: str = "", autocall_api: bool = F
     cursor.close()
     cnxn.close()
     
+    logger.log(f"Connection to Access closed", "LOG", "magic.log", args.log, args.verbose)
+    
     return card_list
 
 def get_card_prices(cards: list[card_api.Card], check_cache: bool = True, write_to_cache: bool = True) -> None:
@@ -51,18 +64,23 @@ def get_card_prices(cards: list[card_api.Card], check_cache: bool = True, write_
     new_cache = {}
     today = datetime.today().strftime("%Y%m%d")
     
+    logger.log(f"Today's date: {today}", "LOG", "magic.log", args.log, args.verbose)
+    
     # Make sure the file exists
     file = open(cache_filename, "a")
     file.close()
     
     if (check_cache):
         with open(cache_filename, "r") as file:
+            logger.log(f"Cache file {cache_filename} opened for reading", "LOG", "magic.log", args.log, args.verbose)
             # If date is today, we can continue
             cache_date = file.readline().strip()
             if (today == cache_date): # We are good to continue
                 prices = [l.strip().split(",") for l in file.readlines()]
-                for price in prices:
-                    old_cache[price[0]] = price[1]
+                for price in prices: old_cache[price[0]] = price[1]
+                logger.log(f"Found {len(old_cache)} cached card prices", "LOG", "magic.log", args.log, args.verbose)
+            else:
+                logger.log(f"Cache is old, ignoring the cache", "WARNING", "magic.log", args.log, args.verbose)
                     
     # Go through old_cache and get prices
     # If check_cache = False, then old_cache is empty no matter what
@@ -78,14 +96,22 @@ def get_card_prices(cards: list[card_api.Card], check_cache: bool = True, write_
             card.set_price_from_api()
             new_price = card.price
             new_cache[card_hash] = new_price
+        
+        
+        if (args.print_cards): print(f"\tFound {card} for ${card.price}")
     
     # Write all the new prices to the cache
     if (write_to_cache):
         with open(cache_filename, "w") as file:
+            logger.log(f"Cache file {cache_filename} opened for writing", "LOG", "magic.log", args.log, args.verbose)
             file.write(f"{today}\n")
             for hash_key in new_cache:
                 file.write(f"{hash_key},{new_cache[hash_key]}\n")
+            logger.log(f"Finished writing {len(new_cache)} to the cache", "LOG", "magic.log", args.log, args.verbose)
             
-
-x = get_cards_from_database("Magic.accdb", sql = "SELECT * FROM Cards WHERE Amount >= 2")
-get_card_prices(x, True, True)
+    logger.log(f"Finished fetching all card prices", "LOG", "magic.log", args.log, args.verbose)
+       
+            
+if __name__ == "__main__":
+    x = get_cards_from_database("Magic.accdb")
+    get_card_prices(x, True, True)
