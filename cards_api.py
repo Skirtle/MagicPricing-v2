@@ -1,8 +1,11 @@
 from dataclasses import dataclass, field
 from hashlib import sha256
 from time import sleep
-import api
+import requests
 
+API_CALL_TIMEOUT_MS = 100 # Must be between 50-100 ms 
+API_URL = "https://api.scryfall.com"
+HEADER = { "Content-Type": "application/json" }
 
 foiling_to_price = {
     "nonfoil": "usd",
@@ -32,7 +35,7 @@ class Card:
         self.foiling = foiling if foiling in foil_options else "nonfoil" # Assume nonfoil is bad foiling option
         
         if (call_api): 
-            self.response_json = api.get_api_response(self)
+            self.response_json = get_api_response(self)
             self.set_price_from_api()
         else: self.response_json = {}
         
@@ -47,7 +50,7 @@ class Card:
     def set_price_from_api(self) -> None:
         if (self.response_json == {}): 
             print("Empty API response, calling the API")
-            self.response_json = api.get_api_response(self)
+            self.response_json = get_api_response(self)
         
         prices = self.response_json["prices"]
         price = prices[foiling_to_price[self.foiling]]
@@ -57,7 +60,21 @@ class Card:
         if (price == None): self.price = 0.0 # No price, set to 0
         else: self.price = price
        
-     
+class BadCardCallError(Exception):
+    def __init__(self, code: int, card: Card) -> None:
+        self.code = code
+        self.card = card
+        super().__init__(code)
+        
+    def __str__(self) -> str:
+        return f"Got status code {self.code} for {self.card.name} [{self.card.collector_number}, {self.card.set}, {self.card.foiling}]"
+
+
+def get_api_response(card) -> dict:
+    card_url = f"{API_URL}/cards/{card.set}/{card.collector_number}"
+    response = requests.get(card_url)
+    sleep(API_CALL_TIMEOUT_MS / 1000)
+    return response.json()
 
 if __name__ == "__main__":
     print("Welcome to cards.py")
