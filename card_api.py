@@ -34,12 +34,10 @@ class Card:
     
     def __str__(self) -> str:  return f"x{self.quantity} {self.name} [#{self.collector_number} {self.set}, {self.foiling}] = ${self.price:.2f}"
     
-    def generate_hash(self) -> str:
-        return sha256(f"{self.name}{self.collector_number}{self.set}{self.foiling}".encode()).hexdigest()
+    def generate_hash(self) -> str: return sha256(f"{self.name}{self.collector_number}{self.set}{self.foiling}".encode()).hexdigest()
     
     def set_price_from_api(self) -> None:
-        if (self.response_json == {}):
-            self.response_json = get_api_response(self)
+        if (self.response_json == {}): self.response_json = get_api_response(self)
         
         prices = self.response_json["prices"]
         price = prices[foiling_to_price[self.foiling]]

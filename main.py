@@ -3,11 +3,13 @@ from os import getcwd
 from datetime import datetime
 
 parser = argparse.ArgumentParser(prog = "Magic Card Pricing", description = "Logs the prices of Magic cards")
-parser.add_argument("--dont-read-cache", action = "store_false", default = True, help = "Do not read from prices.cache")
-parser.add_argument("--dont-write-cache", action = "store_false", default = True, help = "Do not write to prices.cache")
+parser.add_argument("--dont_read_cache", action = "store_false", default = True, help = "Do not read from prices.cache")
+parser.add_argument("--dont_write_cache", action = "store_false", default = True, help = "Do not write to prices.cache")
 parser.add_argument("-l", "--log", action = "store_true", default = False, help = "Log events to the magic.log")
 parser.add_argument("-v", "--verbose", action = "store_true", default = False, help = "Print information to the screen")
-parser.add_argument("-p", "--print-cards", action = "store_true", default = False, help = "Print the cards to screen as the price is found")
+parser.add_argument("-p", "--print_cards", action = "store_true", default = False, help = "Print the cards to screen as the price is found")
+parser.add_argument("-V", "--validate", action = "store_true", default = False, help = "Validate the card names. If a card does not match, stop the whole program")
+parser.add_argument("--sql", default = "SELECT * FROM Cards", help = "Use a custom SQL query. Default is 'SELECT * FROM Cards'")
 
 args = parser.parse_args()
 
@@ -58,7 +60,13 @@ def get_cards_from_database(filename: str, sql: str = "", autocall_api: bool = F
     
     return card_list
 
-def get_card_prices(cards: list[card_api.Card], check_cache: bool = True, write_to_cache: bool = True) -> None:
+def read_cards_from_cache() -> dict:
+    return {}
+
+def write_cards_to_cache() -> None:
+    ...
+
+def get_card_prices_from_api(cards: list[card_api.Card], check_cache: bool = True, write_to_cache: bool = True) -> None:
     cache_filename = "prices.cache"
     old_cache = {}
     new_cache = {}
@@ -85,6 +93,9 @@ def get_card_prices(cards: list[card_api.Card], check_cache: bool = True, write_
     # Go through old_cache and get prices
     # If check_cache = False, then old_cache is empty no matter what
     for card in cards:
+        if (args.validate): ... # If validate, we will call the API for each card regardless, so we can skip everything following
+        
+        
         card_hash = card.generate_hash()
         if (card_hash in old_cache):
             card.price = float(old_cache[card_hash])
@@ -110,8 +121,13 @@ def get_card_prices(cards: list[card_api.Card], check_cache: bool = True, write_
             logger.log(f"Finished writing {len(new_cache)} to the cache", "LOG", "magic.log", args.log, args.verbose)
             
     logger.log(f"Finished fetching all card prices", "LOG", "magic.log", args.log, args.verbose)
-       
-            
+
+def validate_card_names(cards: list[card_api.Card]) -> bool:
+    
+    
+    
+    return True
+
 if __name__ == "__main__":
     x = get_cards_from_database("Magic.accdb")
-    get_card_prices(x, True, True)
+    get_card_prices_from_api(x, True, True)
