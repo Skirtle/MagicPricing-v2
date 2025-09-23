@@ -14,6 +14,7 @@ parser.add_argument("--sql", default = "SELECT * FROM Cards", help = "Use a cust
 parser.add_argument("--log_file", default = "magic.log", help = "Filename where logs are stored")
 parser.add_argument("--database", default = "Magic.accdb", help = "The database to read from")
 parser.add_argument("--strict_mode", action = "store_true", default = False, help = "Only continue if there are no invalid cards after validation")
+parser.add_argument("--clear_cache", action = "store_true", default = False, help = "Clear the cache before starting")
 
 args = parser.parse_args()
 
@@ -190,5 +191,9 @@ def validate_card_name(card: card_api.Card) -> bool:
     return card.name == card.response_json["name"]
 
 if __name__ == "__main__":
+    if (args.clear_cache): 
+        file = open("prices.cache", "w")
+        file.close()
+    
     x = get_cards_from_database("Magic.accdb")
     y = get_card_prices_from_api(x, args.dont_read_cache, args.dont_write_cache)
