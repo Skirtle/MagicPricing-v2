@@ -128,9 +128,10 @@ def get_card_prices_from_api(cards: list[card_api.Card], check_cache: bool = Tru
     file = open(cache_filename, "a")
     file.close()
     
+    # Read the cache
     if (check_cache): old_cache = read_cards_from_cache()
     
-    # Call API for all cards, no matter what
+    # If we are validating, call API for all cards, no matter what
     if (args.validate or args.validate_only): 
         # Call API for all cards, no matter what
         for card in cards:
@@ -145,6 +146,7 @@ def get_card_prices_from_api(cards: list[card_api.Card], check_cache: bool = Tru
             else:
                 print(f"{logger.Color.GREEN} succeeded {logger.Color.RESET}")
         
+        
         # Write to file
         with open("validate.txt", "w") as file:
             for card in invalid_cards:
@@ -152,33 +154,33 @@ def get_card_prices_from_api(cards: list[card_api.Card], check_cache: bool = Tru
                 api_card = f"{card.response_json['name']} [{card.response_json['set'].upper()} {card.response_json['collector_number']}]"
                 file.write(f"Got {db_card} but found {api_card}\n")
                 
-        if (len(invalid_cards) > 0 and args.strict_mode): 
-            logger.log("Not all cards succeeded validation, quitting", "ERROR", args.log_file, args.log, args.verbose)
-            return False
+        if ((len(invalid_cards) > 0 and args.strict_mode) or args.validate_only): 
+            if (len(invalid_cards) > 0): logger.log("Not all cards succeeded validation, quitting", "ERROR", args.log_file, args.log, args.verbose)
+            else: logger.log("All cards validated successfully", "LOG", args.log_file, args.log, args.verbose)
+            return len(invalid_cards) == 0
         
     # Go through old_cache and get prices
-    # If check_cache = False, then old_cache is empty no matter what
-    if (not args.validate_only):
-        if (args.print_cards): print("Starting card price fetching")
-        for card in cards:
-            if (card in invalid_cards): 
-                if (args.print_cards): print(f"\tSkipping invalid card {card}")
-                continue
-            card_hash = card.generate_hash()
-            
-            if (card_hash in old_cache):
-                card.price = float(old_cache[card_hash])
-                new_cache[card_hash] = float(old_cache[card_hash])
-            
-            else:
-                # This is where we call the API
-                # We will also write the new price to the new_cache, only writing to file if allowed
-                card.set_price_from_api()
-                new_price = card.price
-                new_cache[card_hash] = new_price
-            if (args.print_cards): print(f"\tFound {card}")
+    if (args.print_cards): print("Starting card price fetching")
+    for card in cards:
+        if (card in invalid_cards): 
+            if (args.print_cards): print(f"\tSkipping invalid card {card}")
+            continue
+        card_hash = card.generate_hash()
+        
+        if (card_hash in old_cache):
+            card.price = float(old_cache[card_hash])
+            new_cache[card_hash] = float(old_cache[card_hash])
+        
+        else:
+            # This is where we call the API
+            # We will also write the new price to the new_cache, only writing to file if allowed
+            card.set_price_from_api()
+            new_price = card.price
+            new_cache[card_hash] = new_price
+        if (args.print_cards): print(f"\tFound {card}")
     
-    if (write_to_cache and not args.validate_only): write_cards_to_cache(new_cache, old_cache)
+    # Write to cache
+    if (write_to_cache): write_cards_to_cache(new_cache, old_cache)
     
     logger.log(f"Finished fetching", "LOG", args.log_file, args.log, args.verbose)
     return len(invalid_cards) == 0
@@ -188,6 +190,5 @@ def validate_card_name(card: card_api.Card) -> bool:
     return card.name == card.response_json["name"]
 
 if __name__ == "__main__":
-    print(args)
     x = get_cards_from_database("Magic.accdb")
     y = get_card_prices_from_api(x, args.dont_read_cache, args.dont_write_cache)
