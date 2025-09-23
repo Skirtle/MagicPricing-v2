@@ -46,7 +46,6 @@ class Card:
     
     def set_price_from_api(self) -> None:
         # {'usd': '0.45', 'usd_foil': '1.47', 'usd_etched': None, 'eur': '0.75', 'eur_foil': '1.67', 'tix': '2.50'}
-        
         if (self.response_json == {}): self.response_json = get_api_response(self)
         
         prices = self.response_json["prices"]
@@ -81,4 +80,5 @@ def get_api_response(card) -> dict:
 if __name__ == "__main__":
     print("Welcome to card_api.py")
     rep = get_api_response(Card("Faithless Looting", "642", "CMM", "nonfoil"))
-    print(rep["prices"])
+    for key in rep:
+        print(f"{key}: {rep[key]}\n")

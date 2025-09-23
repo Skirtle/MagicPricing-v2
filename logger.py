@@ -28,7 +28,8 @@ class Color:
 level_colors = {
     "LOG": Color.GREEN,
     "ERROR": Color.RED,
-    "WARNING": Color.YELLOW
+    "WARNING": Color.YELLOW,
+    "": "" # For no coloring
 }
 
 def log(message: str, level: str, filename: str, allow_file: bool = True, allow_screen: bool = True) -> None:
