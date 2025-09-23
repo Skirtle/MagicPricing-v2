@@ -9,6 +9,7 @@ parser.add_argument("-l", "--log", action = "store_true", default = False, help 
 parser.add_argument("-v", "--verbose", action = "store_true", default = False, help = "Print information to the screen")
 parser.add_argument("-p", "--print_cards", action = "store_true", default = False, help = "Print the cards to screen as the price is found")
 parser.add_argument("-V", "--validate", action = "store_true", default = False, help = "Validate the card names. If a card does not match, stop the whole program")
+parser.add_argument("-Vo", "--validate_only", action = "store_true", default = False, help = "Validate card names and write all mismatches to validate.txt")
 parser.add_argument("--sql", default = "SELECT * FROM Cards", help = "Use a custom SQL query. Default is 'SELECT * FROM Cards'")
 
 args = parser.parse_args()
@@ -61,10 +62,29 @@ def get_cards_from_database(filename: str, sql: str = "", autocall_api: bool = F
     return card_list
 
 def read_cards_from_cache() -> dict:
-    return {}
+    cache_filename = "prices.cache"
+    cache = {}
+    today = datetime.today().strftime("%Y%m%d")
+    
+    with open(cache_filename, "r") as file:
+        logger.log(f"Cache file {cache_filename} opened for reading", "LOG", "magic.log", args.log, args.verbose)
+        # If date is today, we can continue
+        cache_date = file.readline().strip()
+        
+        if (today == cache_date): # We are good to continue
+            prices = [l.strip().split(",") for l in file.readlines()]
+            for price in prices: cache[price[0]] = price[1]
+            logger.log(f"Found {len(cache)} cached card prices", "LOG", "magic.log", args.log, args.verbose)
+        
+        else: logger.log(f"Cache is old, ignoring the cache", "WARNING", "magic.log", args.log, args.verbose)
+    
+    return cache
 
-def write_cards_to_cache() -> None:
-    ...
+def write_cards_to_cache(cards: dict) -> None:
+    
+    
+    
+    return
 
 def get_card_prices_from_api(cards: list[card_api.Card], check_cache: bool = True, write_to_cache: bool = True) -> None:
     cache_filename = "prices.cache"
@@ -109,7 +129,7 @@ def get_card_prices_from_api(cards: list[card_api.Card], check_cache: bool = Tru
             new_cache[card_hash] = new_price
         
         
-        if (args.print_cards): print(f"\tFound {card} for ${card.price}")
+        if (args.print_cards): print(f"\tFound {card}")
     
     # Write all the new prices to the cache
     if (write_to_cache):

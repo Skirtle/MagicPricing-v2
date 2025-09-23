@@ -1,17 +1,25 @@
 from dataclasses import dataclass, field
 from hashlib import sha256
 from time import sleep
+from logger import Color
 import requests
 
 API_CALL_TIMEOUT_MS = 100 # Must be between 50-100 ms 
 API_URL = "https://api.scryfall.com"
 
+CURRENCY = "usd"
+
 foiling_to_price = {
-    "nonfoil": "usd",
-    "foil": "usd_foil",
-    "etched": "usd_etched"
+    "nonfoil": f"{CURRENCY}",
+    "foil": f"{CURRENCY}_foil",
+    "etched": f"{CURRENCY}_etched"
 }
 foil_options = ["nonfoil", "foil", "etched"]
+currency_symbols = {
+    "usd": "$",
+    "eur": "€",
+    "tix": "tix "
+}
 
 @dataclass(order=True)
 class Card:
@@ -32,11 +40,13 @@ class Card:
             self.set_price_from_api()
         else: self.response_json = {}
     
-    def __str__(self) -> str:  return f"x{self.quantity} {self.name} [#{self.collector_number} {self.set}, {self.foiling}] = ${self.price:.2f}"
+    def __str__(self) -> str:  return f"x{self.quantity} {Color.BLUE}{self.name}{Color.RESET} [#{self.collector_number} {self.set}, {self.foiling}] = {Color.GREEN}{currency_symbols[CURRENCY]}{self.price:.2f}{Color.RESET}"
     
     def generate_hash(self) -> str: return sha256(f"{self.name}{self.collector_number}{self.set}{self.foiling}".encode()).hexdigest()
     
     def set_price_from_api(self) -> None:
+        # {'usd': '0.45', 'usd_foil': '1.47', 'usd_etched': None, 'eur': '0.75', 'eur_foil': '1.67', 'tix': '2.50'}
+        
         if (self.response_json == {}): self.response_json = get_api_response(self)
         
         prices = self.response_json["prices"]
@@ -66,3 +76,9 @@ def get_api_response(card) -> dict:
         raise BadCardCallError(response.status_code, card)
     
     return response.json()
+
+
+if __name__ == "__main__":
+    print("Welcome to card_api.py")
+    rep = get_api_response(Card("Faithless Looting", "642", "CMM", "nonfoil"))
+    print(rep["prices"])
