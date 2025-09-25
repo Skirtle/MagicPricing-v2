@@ -1,3 +1,7 @@
+import card_api
+import string
+from openpyxl import load_workbook, Workbook
+
 def append_to_workbook(wb_filename: str, cards: list[card_api.Card]) -> None:
     try:
         workbook = load_workbook(filename = wb_filename)

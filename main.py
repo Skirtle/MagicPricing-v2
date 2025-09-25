@@ -1,5 +1,5 @@
-import card_api, logger
-import pyodbc, argparse, string
+import card_api, logger, custom_csv
+import pyodbc, argparse
 from os import getcwd
 from datetime import datetime
 
