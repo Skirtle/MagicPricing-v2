@@ -1,4 +1,4 @@
-import card_api, logger, excel
+import card_api, logger, custom_excel
 import pyodbc, argparse
 from os import getcwd
 from datetime import datetime
@@ -192,7 +192,7 @@ def validate_card_name(card: card_api.Card) -> bool:
     return card.name == card.response_json["name"]
 
 if __name__ == "__main__":
-
+    custom_excel.create_empty_workbook("test.xlsx")
     
     
     exit()
