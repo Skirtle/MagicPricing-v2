@@ -1,4 +1,5 @@
-import card_api, pyodbc, argparse, logger
+import card_api, logger
+import pyodbc, argparse, string
 from os import getcwd
 from datetime import datetime
 
@@ -195,5 +196,6 @@ if __name__ == "__main__":
         file = open("prices.cache", "w")
         file.close()
     
-    x = get_cards_from_database("Magic.accdb")
-    y = get_card_prices_from_api(x, args.dont_read_cache, args.dont_write_cache)
+    
+    card_list = get_cards_from_database("Magic.accdb")
+    cards_valid = get_card_prices_from_api(card_list, args.dont_read_cache, args.dont_write_cache)
