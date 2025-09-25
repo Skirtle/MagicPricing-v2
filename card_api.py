@@ -63,7 +63,7 @@ class BadCardCallError(Exception):
         super().__init__(code)
         
     def __str__(self) -> str:
-        return f"Got status code {self.code} for {self.card.name} [{self.card.collector_number}, {self.card.set}, {self.card.foiling}]"
+        return f"Got status code {self.code} for {self.card.name} [{self.card.collector_number}, {self.card.set}, {self.card.foiling}]\nURL = {API_URL}/cards/{self.card.set}/{self.card.collector_number}"
 
 def get_api_response(card) -> dict:
     card_url = f"{API_URL}/cards/{card.set}/{card.collector_number}"

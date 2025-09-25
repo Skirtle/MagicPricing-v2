@@ -1,7 +1,10 @@
-import card_api, logger, custom_excel
+import card_api, logger
 import pyodbc, argparse
 from os import getcwd
 from datetime import datetime
+from magic_excel import *
+from openpyxl.styles import Alignment
+from openpyxl.styles import PatternFill, Border, Side, Font
 
 parser = argparse.ArgumentParser(prog = "Magic Card Pricing", description = "Logs the prices of Magic cards")
 parser.add_argument("--dont_read_cache", action = "store_false", default = True, help = "Do not read from prices.cache")
@@ -16,6 +19,7 @@ parser.add_argument("--log_file", default = "magic.log", help = "Filename where 
 parser.add_argument("--database", default = "Magic.accdb", help = "The database to read from")
 parser.add_argument("--strict_mode", action = "store_true", default = False, help = "Only continue if there are no invalid cards after validation")
 parser.add_argument("--clear_cache", action = "store_true", default = False, help = "Clear the cache before starting")
+parser.add_argument("--excel_filename", default = "magic.xlsx", help = "Set the filename for the exported Excel spreadsheet. Default = magic.xlsx")
 
 args = parser.parse_args()
 
@@ -54,6 +58,9 @@ def get_cards_from_database(filename: str, sql: str = "", autocall_api: bool = F
         card_set = temp_card[2]
         card_foil = temp_card[3].lower()
         card_quantity = int(temp_card[4])
+        
+        if (card_set == "PLIST"): card_set = "PLST"
+        
         card = card_api.Card(card_name, card_cn, card_set, card_foil, quantity = card_quantity, call_api = autocall_api)
         card_list.append(card)
         
@@ -157,7 +164,7 @@ def get_card_prices_from_api(cards: list[card_api.Card], check_cache: bool = Tru
                 file.write(f"Got {db_card} but found {api_card}\n")
                 
         if ((len(invalid_cards) > 0 and args.strict_mode) or args.validate_only): 
-            if (len(invalid_cards) > 0): logger.log("Not all cards succeeded validation, quitting", "ERROR", args.log_file, args.log, args.verbose)
+            if (len(invalid_cards) > 0): logger.log("Not all cards succeeded validation, quitting. Check validate.txt", "ERROR", args.log_file, args.log, args.verbose)
             else: logger.log("All cards validated successfully", "LOG", args.log_file, args.log, args.verbose)
             return len(invalid_cards) == 0
         
@@ -191,14 +198,76 @@ def validate_card_name(card: card_api.Card) -> bool:
     card.response_json = card_api.get_api_response(card) # May as well set the price as well
     return card.name == card.response_json["name"]
 
+def export_excel(filename: str, cards: list[card_api.Card]) -> None:
+    with ExcelManager(filename, "w") as file:
+        sheet = file.active
+        center_align = Alignment(horizontal = "center", vertical = "center")
+        if (sheet == None): raise ValueError("how")
+        
+        logger.log(f"Opened {filename}", "LOG", args.log_file, args.log, args.verbose)
+        
+        # Initial settings
+        sheet["A1"] = "Name"
+        sheet["B1"] = "Number"
+        sheet["C1"] = "Set"
+        sheet["D1"] = "Foiling"
+        sheet["E1"] = "Quantity"
+        
+        # Start writing data in first available space
+        # Get the first empty column and set it
+        new_column = get_first_empty_column(sheet)
+        date_formatted = datetime.now().strftime("%Y-%m-%d")
+        sheet[f"{new_column}1"] = date_formatted
+        sheet[f"{new_column}1"].number_format = "YYYY-MM-DD"
+        
+        logger.log(f"Next empty column found: {new_column}, setting date to {date_formatted}", "LOG", args.log_file, args.log, args.verbose)
+        
+        # Start inputting  card information
+        for card in cards:
+            card_row = find_card_in_sheet(card, sheet)
+            sheet[f"A{card_row}"] = card.name
+            sheet[f"B{card_row}"] = card.collector_number
+            sheet[f"C{card_row}"] = card.set
+            sheet[f"D{card_row}"] = card.foiling
+            sheet[f"E{card_row}"] = card.quantity
+            sheet[f"{new_column}{card_row}"] = card.price
+            sheet[f"{new_column}{card_row}"].number_format = '"$"#,##0.00'
+            
+        logger.log(f"Adding style and alignment to cells", "LOG", args.log_file, args.log, args.verbose)
+        # Center align all of the cells
+        center_align = Alignment(horizontal="center", vertical="center")
+        for row in sheet.iter_rows():
+            for cell in row:
+                cell.alignment = center_align
+                
+                
+        fill = PatternFill(start_color="A5A5A5", end_color="A5A5A5", fill_type="solid")
+        font = Font(name="Calibri", size=11, bold=True, color="FFFFFFFF")
+        double_side = Side(border_style="double", color="000000")
+        thin_side = Side(border_style="thin", color="000000")
+        border = Border(left=thin_side, right=thin_side, top=double_side, bottom=double_side)
+        
+        # Fix the width of each column and style of each header
+        for i in range(1, column_to_number(new_column) + 1):
+            set_column_width(sheet, number_to_column(i))
+            sheet[f"{number_to_column(i)}1"].fill = fill
+            sheet[f"{number_to_column(i)}1"].border = border
+            sheet[f"{number_to_column(i)}1"].font = font
+            
+    logger.log(f"Saved and closed {filename}", "LOG", args.log_file, args.log, args.verbose)
+
 if __name__ == "__main__":
-    custom_excel.create_empty_workbook("test.xlsx")
-    
-    
-    exit()
     if (args.clear_cache): 
         file = open("prices.cache", "w")
         file.close()
     
-    card_list = get_cards_from_database("Magic.accdb")
+    card_list = get_cards_from_database(args.database)
     cards_valid = get_card_prices_from_api(card_list, args.dont_read_cache, args.dont_write_cache)
+    
+    if (".xlsx" not in args.excel_filename): excel_filename = args.excel_filename + ".xlsx"
+    else: excel_filename = args.excel_filename
+    
+    if (args.export): export_excel(excel_filename, card_list)
+            
+    logger.log(f"Done", "LOG", args.log_file, args.log, args.verbose)
+            
