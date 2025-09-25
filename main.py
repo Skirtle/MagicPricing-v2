@@ -20,6 +20,7 @@ parser.add_argument("--database", default = "Magic.accdb", help = "The database 
 parser.add_argument("--strict_mode", action = "store_true", default = False, help = "Only continue if there are no invalid cards after validation")
 parser.add_argument("--clear_cache", action = "store_true", default = False, help = "Clear the cache before starting")
 parser.add_argument("--excel_filename", default = "magic.xlsx", help = "Set the filename for the exported Excel spreadsheet. Default = magic.xlsx")
+parser.add_argument("-E", "--dont_export", action = "store_true", default = False, help = "Don't export to Excel")
 
 args = parser.parse_args()
 
@@ -198,13 +199,13 @@ def validate_card_name(card: card_api.Card) -> bool:
     card.response_json = card_api.get_api_response(card) # May as well set the price as well
     return card.name == card.response_json["name"]
 
-def export_excel(filename: str, cards: list[card_api.Card]) -> None:
+def export_excel(filename: str, cards: list[card_api.Card], sheet_name = "Sheet") -> None:
     with ExcelManager(filename, "w") as file:
         sheet = file.active
         center_align = Alignment(horizontal = "center", vertical = "center")
         if (sheet == None): raise ValueError("how")
-        
-        logger.log(f"Opened {filename}", "LOG", args.log_file, args.log, args.verbose)
+        sheet.title = sheet_name
+        logger.log(f"Opened {filename}, sheet {sheet.title}", "LOG", args.log_file, args.log, args.verbose)
         
         # Initial settings
         sheet["A1"] = "Name"
@@ -267,7 +268,7 @@ if __name__ == "__main__":
     if (".xlsx" not in args.excel_filename): excel_filename = args.excel_filename + ".xlsx"
     else: excel_filename = args.excel_filename
     
-    if (args.export): export_excel(excel_filename, card_list)
+    if (not args.dont_export): export_excel(excel_filename, card_list, args.database.split(".")[0])
             
     logger.log(f"Done", "LOG", args.log_file, args.log, args.verbose)
             
