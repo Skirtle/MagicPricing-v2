@@ -4,6 +4,8 @@ from os import getcwd
 from datetime import datetime
 from openpyxl.styles import Alignment
 from openpyxl.styles import PatternFill, Border, Side, Font
+from os import system
+system("")
 
 parser = argparse.ArgumentParser(prog = "Magic Card Pricing", description = "Logs the prices of Magic cards")
 parser.add_argument("--dont_read_cache", action = "store_false", default = True, help = "Do not read from prices.cache")
