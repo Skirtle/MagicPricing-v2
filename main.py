@@ -267,6 +267,8 @@ if __name__ == "__main__":
     card_list = get_cards_from_database(args.database, args.sql)
     cards_valid = get_card_prices_from_api(card_list, args.dont_read_cache, args.dont_write_cache)
     
+    if (args.validate_only or (not cards_valid and args.strict_mode and args.validate)): exit()
+    
     if (".xlsx" not in args.excel_filename): excel_filename = args.excel_filename + ".xlsx"
     else: excel_filename = args.excel_filename
     
