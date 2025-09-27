@@ -6,3 +6,4 @@ validate.txt
 Test.accdb
 *.pyc
 venv/
+*.ps1

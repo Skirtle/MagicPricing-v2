@@ -1,8 +1,7 @@
-import card_api, logger
+import card_api, logger, magic_excel as me
 import pyodbc, argparse
 from os import getcwd
 from datetime import datetime
-from magic_excel import *
 from openpyxl.styles import Alignment
 from openpyxl.styles import PatternFill, Border, Side, Font
 
@@ -21,6 +20,7 @@ parser.add_argument("--strict_mode", action = "store_true", default = False, hel
 parser.add_argument("--clear_cache", action = "store_true", default = False, help = "Clear the cache before starting")
 parser.add_argument("--excel_filename", default = "magic.xlsx", help = "The filename for the exported Excel spreadsheet. Default = 'magic.xlsx'")
 parser.add_argument("-E", "--dont_export", action = "store_true", default = False, help = "Don't export to Excel")
+parser.add_argument("--keep_open", action = "store_true", default = False, help = "Keep program open at the end")
 
 args = parser.parse_args()
 
@@ -200,7 +200,7 @@ def validate_card_name(card: card_api.Card) -> bool:
     return card.name == card.response_json["name"]
 
 def export_excel(filename: str, cards: list[card_api.Card], sheet_name = "Sheet") -> None:
-    with ExcelManager(filename, "w") as file:
+    with me.ExcelManager(filename, "w") as file:
         sheet = file.active
         center_align = Alignment(horizontal = "center", vertical = "center")
         if (sheet == None): raise ValueError("how")
@@ -216,7 +216,7 @@ def export_excel(filename: str, cards: list[card_api.Card], sheet_name = "Sheet"
         
         # Start writing data in first available space
         # Get the first empty column and set it
-        new_column = get_first_empty_column(sheet)
+        new_column = me.get_first_empty_column(sheet)
         date_formatted = datetime.now().strftime("%Y-%m-%d")
         sheet[f"{new_column}1"] = date_formatted
         sheet[f"{new_column}1"].number_format = "YYYY-MM-DD"
@@ -225,7 +225,7 @@ def export_excel(filename: str, cards: list[card_api.Card], sheet_name = "Sheet"
         
         # Start inputting  card information
         for card in cards:
-            card_row = find_card_in_sheet(card, sheet)
+            card_row = me.find_card_in_sheet(card, sheet)
             sheet[f"A{card_row}"] = card.name
             sheet[f"B{card_row}"] = card.collector_number
             sheet[f"C{card_row}"] = card.set
@@ -249,11 +249,11 @@ def export_excel(filename: str, cards: list[card_api.Card], sheet_name = "Sheet"
         border = Border(left=thin_side, right=thin_side, top=double_side, bottom=double_side)
         
         # Fix the width of each column and style of each header
-        for i in range(1, column_to_number(new_column) + 1):
-            set_column_width(sheet, number_to_column(i))
-            sheet[f"{number_to_column(i)}1"].fill = fill
-            sheet[f"{number_to_column(i)}1"].border = border
-            sheet[f"{number_to_column(i)}1"].font = font
+        for i in range(1, me.column_to_number(new_column) + 1):
+            me.set_column_width(sheet, me.number_to_column(i))
+            sheet[f"{me.number_to_column(i)}1"].fill = fill
+            sheet[f"{me.number_to_column(i)}1"].border = border
+            sheet[f"{me.number_to_column(i)}1"].font = font
             
     logger.log(f"Saved and closed {filename}", "LOG", args.log_file, args.log, args.verbose)
 
@@ -271,4 +271,5 @@ if __name__ == "__main__":
     if (not args.dont_export): export_excel(excel_filename, card_list, args.database.split(".")[0])
             
     logger.log(f"Done", "LOG", args.log_file, args.log, args.verbose)
+    if (args.keep_open): input("Press enter to exit ")
             
