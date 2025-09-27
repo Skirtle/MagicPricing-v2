@@ -250,8 +250,8 @@ def export_excel(filename: str, cards: list[card_api.Card], sheet_name = "Sheet"
         thin_side = Side(border_style="thin", color="000000")
         border = Border(left=thin_side, right=thin_side, top=double_side, bottom=double_side)
         
-        # Fix the width of each column and style of each header
-        for i in range(1, me.column_to_number(new_column) + 1):
+        # Fix the width/style of the columns that can/did change
+        for i in [1, 2, 3, 4, 5, me.column_to_number(new_column)]:
             me.set_column_width(sheet, me.number_to_column(i))
             sheet[f"{me.number_to_column(i)}1"].fill = fill
             sheet[f"{me.number_to_column(i)}1"].border = border
@@ -264,7 +264,7 @@ if __name__ == "__main__":
         file = open("prices.cache", "w")
         file.close()
     
-    card_list = get_cards_from_database(args.database)
+    card_list = get_cards_from_database(args.database, args.sql)
     cards_valid = get_card_prices_from_api(card_list, args.dont_read_cache, args.dont_write_cache)
     
     if (".xlsx" not in args.excel_filename): excel_filename = args.excel_filename + ".xlsx"
