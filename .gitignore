@@ -8,3 +8,4 @@ Test.accdb
 venv/
 *.ps1
 Old.accdb
+Magic.accdb
