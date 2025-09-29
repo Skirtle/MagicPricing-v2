@@ -20,12 +20,13 @@ class ExcelManager():
         return self.file
     
     def __exit__(self, exc_type, exc_value, traceback):
-        try:
-            self.file.save(self.filename)
-        except PermissionError:
-            input("Close Excel and press enter")
-            self.__exit__(exc_type, exc_value, traceback)
-            return
+        if ("w" in self.mode or "a" in self.mode):
+            try:
+                self.file.save(self.filename)
+            except PermissionError:
+                input("Close Excel and press enter")
+                self.__exit__(exc_type, exc_value, traceback)
+                return
         
         self.file.close()
 

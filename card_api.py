@@ -31,6 +31,7 @@ class Card:
     quantity: int = 1
     price: float = 0.0
     call_api: bool = False
+    price_history: dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self):
         object.__setattr__(self, "sort_index", self.name)
