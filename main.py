@@ -17,7 +17,7 @@ parser.add_argument("-V", "--validate", action = "store_true", default = False, 
 parser.add_argument("-Vo", "--validate_only", action = "store_true", default = False, help = "Same as --validate, but does not continue after validating")
 parser.add_argument("--sql", default = "SELECT * FROM Cards", help = "Use a custom SQL query. Default is 'SELECT * FROM Cards'")
 parser.add_argument("--log_file", default = "magic.log", help = "The log file's name. NOT YET IMPLEMENTED")
-parser.add_argument("--database", default = "Magic.accdb", help = "The database file's read from")
+parser.add_argument("--database", default = "Magic.accdb", help = "The database file's read from. Allows for .accdb, .csv, and .xlsx (last two not implemented yet)")
 parser.add_argument("--strict_mode", action = "store_true", default = False, help = "When used with --validate, acts as --validate_only")
 parser.add_argument("--clear_cache", action = "store_true", default = False, help = "Clear the cache before starting")
 parser.add_argument("--excel_filename", default = "magic.xlsx", help = "The filename for the exported Excel spreadsheet. Default = 'magic.xlsx'")
@@ -26,7 +26,7 @@ parser.add_argument("--keep_open", action = "store_true", default = False, help 
 
 args = parser.parse_args()
 
-def get_cards_from_database(filename: str, sql: str = "", autocall_api: bool = False) -> list[card_api.Card]:
+def get_cards_from_access_database(filename: str, sql: str = "", autocall_api: bool = False) -> list[card_api.Card]:
     if (sql == ""): sql = "SELECT * FROM Cards"
     
     # Connect to database
@@ -264,7 +264,7 @@ if __name__ == "__main__":
         file = open("prices.cache", "w")
         file.close()
     
-    card_list = get_cards_from_database(args.database, args.sql)
+    card_list = get_cards_from_access_database(args.database, args.sql)
     cards_valid = get_card_prices_from_api(card_list, args.dont_read_cache, args.dont_write_cache)
     
     if (args.validate_only or (not cards_valid and args.strict_mode and args.validate)): exit()
