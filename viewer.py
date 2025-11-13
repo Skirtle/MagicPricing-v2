@@ -1,4 +1,6 @@
-import argparse, pandas as pd, numpy as np
+import argparse
+import pandas as pd, numpy as np, matplotlib.pyplot as plt
+from random import choice
 import card_api, logger, magic_excel as me
 
 cards: list [card_api.Card] = []
@@ -50,3 +52,39 @@ def convert_to_df(cards: list[card_api.Card]) -> pd.DataFrame:
 
 cards = get_price_history_excel("magic.xlsx")
 cards_df = convert_to_df(cards)
+
+
+names = []
+for card in cards_df:
+    cards_df[card].dropna()
+    names.append(card)
+
+names.sort()
+for index,value in enumerate(names):
+    print(f"[{index + 1}]: {value}")
+
+
+chosen_card = None
+max_num = len(names)
+while (chosen_card == None):
+    chosen_card = input("Choose a card's number to view its price history: ")
+    try:
+        chosen_card = int(chosen_card)
+    except:
+        chosen_card = None
+        continue
+    
+    if (chosen_card <= 0 or chosen_card > max_num):
+        chosen_card = None
+
+card_name = names[chosen_card - 1]
+card_prices = cards_df[card_name]
+max_price = card_prices.max()
+
+plt.style.use('dark_background')
+ax = cards_df[card_name].plot(title = card_name)
+ax.set_ylabel("Price (USD)")
+ax.set_xlabel("Date")
+ax.set_ylim(ymin = 0, ymax = max_price * 1.1)
+ax.yaxis.set_major_formatter('${x:1.2f}')
+plt.show()
