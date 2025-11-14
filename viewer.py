@@ -1,5 +1,6 @@
 import argparse
-import pandas as pd, numpy as np, matplotlib.pyplot as plt
+import pandas as pd, numpy as np, matplotlib.pyplot as plt, matplotlib.dates as mdates
+
 from random import choice
 import card_api, logger, magic_excel as me
 
@@ -87,4 +88,8 @@ ax.set_ylabel("Price (USD)")
 ax.set_xlabel("Date")
 ax.set_ylim(ymin = 0, ymax = max_price * 1.1)
 ax.yaxis.set_major_formatter('${x:1.2f}')
+
+ax.xaxis.set_major_locator(mdates.DayLocator())
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+
 plt.show()
