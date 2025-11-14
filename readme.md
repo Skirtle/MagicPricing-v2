@@ -3,7 +3,7 @@
 ## Setup
 
 1. Clone the repo
-2. Create and activate a virtual environment:
+2. Create and activate a virtual environment (choose one):
    - `python -m venv venv`
    - `venv\Scripts\activate`
 3. Install dependencies: 
