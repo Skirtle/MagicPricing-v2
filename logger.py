@@ -41,3 +41,4 @@ def log_to_file(message: str, level: str, filename: str) -> None:
     
 def log_to_screen(message: str, level: str) -> None:
     print(f"{level_colors[level]}{level}: {Color.RESET}{message}")
+    

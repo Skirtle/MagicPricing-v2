@@ -3,7 +3,6 @@ import string
 from openpyxl import load_workbook, Workbook
 from dataclasses import dataclass
 from openpyxl.worksheet.worksheet import Worksheet
-from openpyxl.styles import PatternFill, Border, Side
 
 @dataclass
 class ExcelManager():
