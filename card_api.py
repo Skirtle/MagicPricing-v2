@@ -68,7 +68,8 @@ class BadCardCallError(Exception):
 
 def get_api_response(card) -> dict:
     card_url = f"{API_URL}/cards/{card.set}/{card.collector_number}"
-    response = requests.get(card_url)
+    user_agent = {"User-Agent": "MagicPricing-v2"}
+    response = requests.get(card_url, headers = user_agent)
     sleep(API_CALL_TIMEOUT_MS / 1000)
     
     if (response.status_code != 200):
