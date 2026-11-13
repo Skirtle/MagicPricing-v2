@@ -9,14 +9,14 @@ API_COLLECTION_CALL_TIMEOUT_MS = 500 # 2 per second at most
 MAX_COLLECTION_SIZE = 75
 API_URL = "https://api.scryfall.com"
 
-CURRENCY = "usd"
+DEFAULT_CURRENCY = "usd"
 BASE_HEADER = {"User-Agent": "MagicPricing-v2.1"}
 COLLECTION_HEADER = {"User-Agent": "MagicPricing-v2.1", "Content-Type": "application/json", "Accept": "application/json"}
 
 foiling_to_price = {
-    "nonfoil": f"{CURRENCY}",
-    "foil": f"{CURRENCY}_foil",
-    "etched": f"{CURRENCY}_etched"
+    "nonfoil": f"{DEFAULT_CURRENCY}",
+    "foil": f"{DEFAULT_CURRENCY}_foil",
+    "etched": f"{DEFAULT_CURRENCY}_etched"
 }
 foil_options = ["nonfoil", "foil", "etched"]
 currency_symbols = {
@@ -35,23 +35,30 @@ class Card:
     quantity: int = 1
     price: float = 0.0
     call_api: bool = False
-    price_history: dict[str, float] = field(default_factory=dict)
+    response_json: dict = {}
+    quantity_price: float = 0.0
 
     def __post_init__(self):
         object.__setattr__(self, "sort_index", self.name)
         if (self.foiling not in foil_options): self.foiling = "nonfoil"
-        if (self.call_api):
-            self.response_json = get_card_api_response(self)
-            self.set_price_from_api()
-        else: self.response_json = {}
+        if (self.call_api): self.set_price_from_api()
     
-    def __str__(self) -> str:  return f"x{self.quantity} {Color.BLUE}{self.name}{Color.RESET} [#{self.collector_number} {self.set}, {self.foiling}] = {Color.GREEN}{currency_symbols[CURRENCY]}{self.price:.2f}{Color.RESET}"
+    def __str__(self) -> str: return f"x{self.quantity} {Color.BLUE}{self.name}{Color.RESET} [#{self.collector_number} {self.set}, {self.foiling}] = {Color.GREEN}{currency_symbols[DEFAULT_CURRENCY]}{self.price:.2f}{Color.RESET}"
     
     def generate_hash(self) -> str: return sha256(f"{self.name}{self.collector_number}{self.set}{self.foiling}".encode()).hexdigest()
     
     def set_price_from_api(self) -> None:
-        # {'usd': '0.45', 'usd_foil': '1.47', 'usd_etched': None, 'eur': '0.75', 'eur_foil': '1.67', 'tix': '2.50'}
-        if (self.response_json == {}): self.response_json = get_card_api_response(self)
+        """
+        "prices": {
+            'usd': '0.45', 
+            'usd_foil': '1.47',
+            'usd_etched': None,
+            'eur': '0.75',
+            'eur_foil': '1.67',
+            'tix': '2.50'
+        }
+        """
+        if (self.response_json == {}): self.response_json = get_card_api_response(self) # If there is no response, call API for information
         
         prices = self.response_json["prices"]
         price = prices[foiling_to_price[self.foiling]]
@@ -61,6 +68,8 @@ class Card:
         # TODO - If no USD price at all, check for another currency and convert (using the conversion at the time of checking)
         if (price == None): self.price = 0.0 # No price, set to 0
         else: self.price = float(price)
+        
+        self.quantity_price = self.quantity * self.price
        
 class BadCardError(Exception):
     def __init__(self, code: int, card: Card) -> None:
