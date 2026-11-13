@@ -5,25 +5,26 @@ from datetime import datetime
 from openpyxl.styles import Alignment
 from openpyxl.styles import PatternFill, Border, Side, Font
 
-parser = argparse.ArgumentParser(prog = "Magic Card Pricing", description = "Logs the prices of Magic cards")
+parser = argparse.ArgumentParser(prog = "Magic Card Pricing", description = "Logs the prices of Magic cards into an Excel spreadsheet")
 parser.add_argument("--dont_read_cache", action = "store_false", default = True, help = "Do not read from prices.cache")
 parser.add_argument("--dont_write_cache", action = "store_false", default = True, help = "Do not write to prices.cache")
-parser.add_argument("-l", "--log", action = "store_true", default = False, help = "Log events to the log file. NOT IMPLEMENTED YET")
+parser.add_argument("-l", "--log", action = "store_true", default = False, help = "Log events to the log file. NOT IMPLEMENTED YET") # TODO - Implement
 parser.add_argument("-v", "--verbose", action = "store_true", default = False, help = "Print debug information to the screen")
-parser.add_argument("-p", "--print_cards", action = "store_true", default = False, help = "Print the cards to screen as the price is found")
-parser.add_argument("-V", "--validate", action = "store_true", default = False, help = "Validate the card names. Writes mismatches to validate.txt")
-parser.add_argument("-Vo", "--validate_only", action = "store_true", default = False, help = "Same as --validate, but does not continue after validating")
+parser.add_argument("-p", "--print_cards", action = "store_true", default = False, help = "Print the cards to screen as the price is found. Currently only works when using --individual") # TODO - Add this for using without -i
+parser.add_argument("-V", "--validate", action = "store_true", default = False, help = "Fetches the card from Scryfall in order to validate the cards' names and writes mismatches to validate.txt")
+parser.add_argument("-Vo", "--validate_only", action = "store_true", default = False, help = "Same as --validate, but does not log the prices after validating")
 parser.add_argument("--sql", default = "SELECT * FROM Cards", help = "Use a custom SQL query. Default is 'SELECT * FROM Cards'")
-parser.add_argument("--log_file", default = "magic.log", help = "The log file's name. NOT YET IMPLEMENTED")
-parser.add_argument("--database", default = "Magic.accdb", help = "The database file's read from. Allows for .accdb, .csv, and .xlsx (last two not implemented yet)")
+parser.add_argument("--log_file", default = "magic.log", help = "The log file's name. NOT YET IMPLEMENTED") # TODO - Implement
+parser.add_argument("--database", default = "Magic.accdb", help = "The database file to read from. Allows for .accdb, .csv, and .xlsx (last two not implemented yet)") # TODO - Implement
 parser.add_argument("--strict_mode", action = "store_true", default = False, help = "When used with --validate, acts as --validate_only")
-parser.add_argument("--clear_cache", action = "store_true", default = False, help = "Clear the cache before starting")
-parser.add_argument("--excel_filename", default = "magic.xlsx", help = "The filename for the exported Excel spreadsheet. Default = 'magic.xlsx'")
+parser.add_argument("--clear_cache", action = "store_true", default = False, help = "Clear the cache before fetching prices regardless of the date")
+parser.add_argument("--excel_filename", default = "magic.xlsx", help = "The filename for the exported Excel spreadsheet. Default is 'magic.xlsx'")
 parser.add_argument("-E", "--dont_export", action = "store_true", default = False, help = "Don't export to Excel")
 parser.add_argument("--keep_open", action = "store_true", default = False, help = "Keep program open at the end")
 parser.add_argument("-i", "--individual", action = "store_true", default = False, help = "Call the API for each individual card instead of one bulk search (not recommended)")
 args = parser.parse_args()
 
+# TODO - Refactor
 def get_cards_from_access_database(filename: str, sql: str = "") -> list[card_api.Card]:
     if (sql == ""): sql = "SELECT * FROM Cards"
     
@@ -45,7 +46,7 @@ def get_cards_from_access_database(filename: str, sql: str = "") -> list[card_ap
     # Read the database
     try: cursor.execute(sql)
     except Exception as err: 
-        logger.log(f"Error when executing SQL query '{sql}', using default instead", "ERROR", args.log_file, args.log, args.verbose)
+        logger.log(f"Error when executing SQL query '{logger.Color.YELLOW}{sql}{logger.Color.RESET}', using default instead", "ERROR", args.log_file, args.log, args.verbose)
         sql = "SELECT * FROM Cards"
         cursor.execute(sql)
     
@@ -75,6 +76,7 @@ def get_cards_from_access_database(filename: str, sql: str = "") -> list[card_ap
     
     return card_list
 
+# TODO - Refactor
 def read_cards_from_cache() -> dict[str, float]:
     cache_filename = "prices.cache"
     cache = {}
@@ -94,6 +96,7 @@ def read_cards_from_cache() -> dict[str, float]:
     
     return cache
 
+# TODO - Refactor
 def write_cards_to_cache(new_cache: dict, old_cache: dict) -> None:
     cache_filename: str = "prices.cache"
     today: str = datetime.today().strftime("%Y%m%d")
@@ -126,6 +129,7 @@ def write_cards_to_cache(new_cache: dict, old_cache: dict) -> None:
     
     return
 
+# TODO - Refactor
 def get_card_prices_from_api(cards: list[card_api.Card], check_cache: bool = True, write_to_cache: bool = True) -> bool:
     cache_filename: str = "prices.cache"
     old_cache: dict = {}
@@ -235,10 +239,12 @@ def get_card_prices_from_api(cards: list[card_api.Card], check_cache: bool = Tru
     logger.log(f"Finished fetching", "LOG", args.log_file, args.log, args.verbose)
     return len(invalid_cards) == 0
 
+# TODO - Refactor
 def validate_card_name(card: card_api.Card) -> bool:
     card.response_json = card_api.get_card_api_response(card) # May as well set the price as well
     return card.name == card.response_json["name"]
 
+# TODO - Refactor
 def export_excel(filename: str, cards: list[card_api.Card], sheet_name = "Sheet") -> None:
     with me.ExcelManager(filename, "w") as file:
         sheet = file.active
@@ -297,7 +303,8 @@ def export_excel(filename: str, cards: list[card_api.Card], sheet_name = "Sheet"
             
     logger.log(f"Saved and closed {filename}", "LOG", args.log_file, args.log, args.verbose)
 
-if __name__ == "__main__":
+# TODO - Refactor
+def main():
     if (args.clear_cache): 
         file = open("prices.cache", "w")
         file.close()
@@ -315,3 +322,6 @@ if __name__ == "__main__":
     logger.log(f"Done", "LOG", args.log_file, args.log, args.verbose)
     if (args.keep_open): input("Press enter to exit ")
             
+
+if __name__ == "__main__":
+    main()
