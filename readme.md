@@ -8,8 +8,8 @@
    - `venv\Scripts\activate`
 3. Install dependencies: 
    - `pip install -r requirements.txt`
-4. Run the project 
-   - `python main.py`
+4. Get more information on how to use the program
+   - `python main.py --help`
 
 
 ## Things to know
