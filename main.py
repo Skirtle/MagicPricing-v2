@@ -1,11 +1,9 @@
 import card_api, logger, magic_excel as me
-import pyodbc, argparse, json
+import pyodbc, argparse
 from os import getcwd
 from datetime import datetime
 from openpyxl.styles import Alignment
 from openpyxl.styles import PatternFill, Border, Side, Font
-from os import system
-system("")
 
 parser = argparse.ArgumentParser(prog = "Magic Card Pricing", description = "Logs the prices of Magic cards")
 parser.add_argument("--dont_read_cache", action = "store_false", default = True, help = "Do not read from prices.cache")
@@ -24,10 +22,9 @@ parser.add_argument("--excel_filename", default = "magic.xlsx", help = "The file
 parser.add_argument("-E", "--dont_export", action = "store_true", default = False, help = "Don't export to Excel")
 parser.add_argument("--keep_open", action = "store_true", default = False, help = "Keep program open at the end")
 parser.add_argument("-i", "--individual", action = "store_true", default = False, help = "Call the API for each individual card instead of one bulk search (not recommended)")
-
 args = parser.parse_args()
 
-def get_cards_from_access_database(filename: str, sql: str = "", autocall_api: bool = False) -> list[card_api.Card]:
+def get_cards_from_access_database(filename: str, sql: str = "") -> list[card_api.Card]:
     if (sql == ""): sql = "SELECT * FROM Cards"
     
     # Connect to database
@@ -46,11 +43,13 @@ def get_cards_from_access_database(filename: str, sql: str = "", autocall_api: b
         return []
     
     # Read the database
-    
     try: cursor.execute(sql)
-    except Exception as err: cursor.execute("SELECT * FROM Cards")
+    except Exception as err: 
+        logger.log(f"Error when executing SQL query '{sql}', using default instead", "ERROR", args.log_file, args.log, args.verbose)
+        sql = "SELECT * FROM Cards"
+        cursor.execute(sql)
     
-    logger.log(f"Fetching cards using {sql}", "LOG", args.log_file, args.log, args.verbose)
+    logger.log(f"Fetching cards using '{sql}'", "LOG", args.log_file, args.log, args.verbose)
     rows = cursor.fetchall()
     logger.log(f"Found {len(rows)} cards", "LOG", args.log_file, args.log, args.verbose)
     card_list = []
@@ -63,21 +62,20 @@ def get_cards_from_access_database(filename: str, sql: str = "", autocall_api: b
         card_foil = temp_card[3].lower()
         card_quantity = int(temp_card[4])
         
-        if (card_set == "PLIST"): card_set = "PLST"
+        if (card_set == "PLIST"): card_set = "PLST" 
         
-        card = card_api.Card(card_name, card_cn, card_set, card_foil, quantity = card_quantity, call_api = autocall_api)
+        card = card_api.Card(card_name, card_cn, card_set, card_foil, quantity = card_quantity)
         card_list.append(card)
         
     
     # Clean up
     cursor.close()
     cnxn.close()
-    
     logger.log(f"Connection to {filename} closed", "LOG", args.log_file, args.log, args.verbose)
     
     return card_list
 
-def read_cards_from_cache() -> dict:
+def read_cards_from_cache() -> dict[str, float]:
     cache_filename = "prices.cache"
     cache = {}
     today = datetime.today().strftime("%Y%m%d")
