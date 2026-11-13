@@ -1,5 +1,5 @@
 import card_api, logger, magic_excel as me
-import pyodbc, argparse
+import pyodbc, argparse, json
 from os import getcwd
 from datetime import datetime
 from openpyxl.styles import Alignment
@@ -23,6 +23,7 @@ parser.add_argument("--clear_cache", action = "store_true", default = False, hel
 parser.add_argument("--excel_filename", default = "magic.xlsx", help = "The filename for the exported Excel spreadsheet. Default = 'magic.xlsx'")
 parser.add_argument("-E", "--dont_export", action = "store_true", default = False, help = "Don't export to Excel")
 parser.add_argument("--keep_open", action = "store_true", default = False, help = "Keep program open at the end")
+parser.add_argument("-i", "--individual", action = "store_true", default = False, help = "Call the API for each individual card instead of one bulk search (not recommended)")
 
 args = parser.parse_args()
 
@@ -173,23 +174,62 @@ def get_card_prices_from_api(cards: list[card_api.Card], check_cache: bool = Tru
         
     # Go through old_cache and get prices
     if (args.print_cards): print("Starting card price fetching")
-    for card in cards:
-        if (card in invalid_cards): 
-            if (args.print_cards): print(f"\tSkipping invalid card {card}")
-            continue
-        card_hash = card.generate_hash()
+    
+    # Call each indiviual card
+    if (args.individual):
+        for card in cards:
+            if (card in invalid_cards): 
+                if (args.print_cards): print(f"\tSkipping invalid card {card}")
+                continue
+            card_hash = card.generate_hash()
+            
+            if (card_hash in old_cache):
+                card.price = float(old_cache[card_hash])
+                new_cache[card_hash] = float(old_cache[card_hash])
+            
+            else:
+                # This is where we call the API
+                # We will also write the new price to the new_cache, only writing to file if allowed
+                card.set_price_from_api()
+                new_price = card.price
+                new_cache[card_hash] = new_price
+            if (args.print_cards): print(f"\tFound {card}")
+            
+    # Bulk call 
+    else:
+        # TDOD - Caching
+        # Create collections of 75 cards each, set the cards and their prices, then create the next batch of cards
+        card_collections: list[list[card_api.Card]] = []
+        t_col: list[card_api.Card] = []
+        for card in cards:
+            if (len(t_col) >= card_api.MAX_COLLECTION_SIZE):
+                card_collections.append(t_col)
+                t_col = []
+            t_col.append(card)
+        if (t_col): card_collections.append(t_col)
         
-        if (card_hash in old_cache):
-            card.price = float(old_cache[card_hash])
-            new_cache[card_hash] = float(old_cache[card_hash])
+        # Get data from API for current collection
+        for collection in card_collections:
+            post_data = card_api.create_collection_from_list(collection)
+            resp = card_api.get_api_collection_response(post_data)
+            data = resp["data"]
+            
+            # Match data
+            for card in collection:
+                for resp_data in data:
+                    c_set = card.set.lower()
+                    c_cn = card.collector_number.lower()
+                    r_set = resp_data["set"].lower()
+                    r_cn = resp_data["collector_number"].lower()
+                    
+                    if (c_set == r_set and c_cn == r_cn):
+                        card.response_json = resp_data
+                        break
+                else:
+                    print(f"Did not find matching data for {card}")
         
-        else:
-            # This is where we call the API
-            # We will also write the new price to the new_cache, only writing to file if allowed
+        for card in cards:
             card.set_price_from_api()
-            new_price = card.price
-            new_cache[card_hash] = new_price
-        if (args.print_cards): print(f"\tFound {card}")
     
     # Write to cache
     if (write_to_cache): write_cards_to_cache(new_cache, old_cache)

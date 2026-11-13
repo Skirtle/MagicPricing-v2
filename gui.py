@@ -72,7 +72,7 @@ def main():
         if (all_cards_added): 
             logger.log_to_screen(f"{card_name} already added to table", "WARNING")
             return
-        with dpg.table_row(parent = "recent_cards"):
+        with dpg.table_row(parent = "recent_cards"): # type: ignore
             dpg.add_text(f"{card_name}") # Card name
             dpg.add_text(f"${y[-1]:,.2f}") # Current price
             dpg.add_text(f"${max(y):,.2f}") # Highest price
@@ -95,7 +95,7 @@ def main():
             if card in added_cards:
                 logger.log_to_screen(f"Already added {card}, skipping", "WARNING")
             else:
-                with dpg.table_row(parent = "recent_cards"):
+                with dpg.table_row(parent = "recent_cards"): # type: ignore
                     dpg.add_text(f"{card}") # Card name
                     dpg.add_text(f"${cards_df[card].dropna().iloc[-1]:,.2f}") # Current price
                     dpg.add_text(f"${max(cards_df[card].dropna()):,.2f}") # Highest price
@@ -125,12 +125,12 @@ def main():
     
     # Create main window
     dpg.create_context()
-    with dpg.window(tag = "main_window"):
+    with dpg.window(tag = "main_window"): # type: ignore
         # Drop down menu for selecting a card
         dpg.add_combo(label = "Cards", items = list(cards_df.keys()), callback = callback_card_chosen)
         
         # Line graph for price history
-        with dpg.plot(label = "History", height = 800, width = -1):
+        with dpg.plot(label = "History", height = 800, width = -1): # type: ignore
             dpg.add_plot_axis(dpg.mvXAxis, label = "Date", tag = "x_axis", tick_format = "%Y-%m-%d", scale = dpg.mvPlotScale_Time)
             dpg.add_plot_axis(dpg.mvYAxis, label = "Price", tag = "y_axis", tick_format = "$%.2f")
             dpg.add_line_series([], [], label = "Price", parent = "y_axis", tag = "price_series")
@@ -138,7 +138,7 @@ def main():
         
         # Table with all/recent cards
         dpg.add_button(label = "Add all cards to table", callback = callback_set_all_cards)
-        with dpg.table(header_row = True, tag = "recent_cards", resizable = True, borders_innerH = True, borders_innerV = True, borders_outerH = True, borders_outerV = True, policy = dpg.mvTable_SizingFixedFit):
+        with dpg.table(header_row = True, tag = "recent_cards", resizable = True, borders_innerH = True, borders_innerV = True, borders_outerH = True, borders_outerV = True, policy = dpg.mvTable_SizingFixedFit): # type: ignore
             dpg.add_table_column(label = "Card name", width_stretch = True) # Card name
             dpg.add_table_column(label = "Current price", width_stretch = True) # Current price
             dpg.add_table_column(label = "Highest price", width_stretch = True) # Highest price

@@ -3,11 +3,15 @@ from hashlib import sha256
 from time import sleep
 from logger import Color
 import requests
+import json
 
-API_CALL_TIMEOUT_MS = 100 # Must be between 50-100 ms 
+API_INDIVIDUAL_CALL_TIMEOUT_MS = 100 # Must be between 50-100 ms 
+API_COLLECTION_CALL_TIMEOUT_MS = 500 # 2 per second at most
+MAX_COLLECTION_SIZE = 75
 API_URL = "https://api.scryfall.com"
 
 CURRENCY = "usd"
+HEADERS = {"User-Agent": "MagicPricing-v2.1"}
 
 foiling_to_price = {
     "nonfoil": f"{CURRENCY}",
@@ -65,12 +69,21 @@ class BadCardCallError(Exception):
         
     def __str__(self) -> str:
         return f"Got status code {self.code} for {self.card.name} [{self.card.collector_number}, {self.card.set}, {self.card.foiling}]\nURL = {API_URL}/cards/{self.card.set}/{self.card.collector_number}"
+    
+class BadCollectionError(Exception):
+    def __init__(self, code: int, reason: str) -> None:
+        self.code = code
+        self.reason = reason
+        super().__init__(code)
+        
+    def __str__(self) -> str:
+        return f"Got status code {self.code} for collection\nReason: {self.reason}"
 
 def get_api_response(card) -> dict:
     card_url = f"{API_URL}/cards/{card.set}/{card.collector_number}"
-    user_agent = {"User-Agent": "MagicPricing-v2"}
-    response = requests.get(card_url, headers = user_agent)
-    sleep(API_CALL_TIMEOUT_MS / 1000)
+    
+    response = requests.get(card_url, headers = HEADERS)
+    sleep(API_INDIVIDUAL_CALL_TIMEOUT_MS / 1000)
     
     if (response.status_code != 200):
         print(card_url)
@@ -78,9 +91,23 @@ def get_api_response(card) -> dict:
     
     return response.json()
 
+def create_collection_from_list(card_list: list[Card]) -> dict:
+    collection = {"identifiers": []}
+    for card in card_list: collection["identifiers"].append({"set": card.set, "collector_number": card.collector_number})
+    return collection
+    
+def get_api_collection_response(collection: dict) -> dict:
+    api_collection_url = f"{API_URL}/cards/collection"
+    new_header = HEADERS.copy()
+    new_header["Content-Type"] = "application/json"
+    new_header["Accept"] = "application/json"
+    
+    resp = requests.post(api_collection_url, json = collection, headers = HEADERS)
+    if (resp.status_code != 200): raise BadCollectionError(resp.status_code, resp.json()["details"])
+    sleep(API_COLLECTION_CALL_TIMEOUT_MS / 1000)
+    
+    return resp.json()
+
 
 if __name__ == "__main__":
     print("Welcome to card_api.py")
-    rep = get_api_response(Card("Faithless Looting", "642", "CMM", "nonfoil"))
-    for key in rep:
-        print(f"{key}: {rep[key]}\n")
