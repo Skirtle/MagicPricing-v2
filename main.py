@@ -238,7 +238,7 @@ def get_card_prices_from_api(cards: list[card_api.Card], check_cache: bool = Tru
     return len(invalid_cards) == 0
 
 def validate_card_name(card: card_api.Card) -> bool:
-    card.response_json = card_api.get_api_response(card) # May as well set the price as well
+    card.response_json = card_api.get_card_api_response(card) # May as well set the price as well
     return card.name == card.response_json["name"]
 
 def export_excel(filename: str, cards: list[card_api.Card], sheet_name = "Sheet") -> None:

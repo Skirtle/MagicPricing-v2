@@ -3,15 +3,15 @@ from hashlib import sha256
 from time import sleep
 from logger import Color
 import requests
-import json
 
-API_INDIVIDUAL_CALL_TIMEOUT_MS = 100 # Must be between 50-100 ms 
+API_INDIVIDUAL_CALL_TIMEOUT_MS = 100 # 10 per second at most
 API_COLLECTION_CALL_TIMEOUT_MS = 500 # 2 per second at most
 MAX_COLLECTION_SIZE = 75
 API_URL = "https://api.scryfall.com"
 
 CURRENCY = "usd"
-HEADERS = {"User-Agent": "MagicPricing-v2.1"}
+BASE_HEADER = {"User-Agent": "MagicPricing-v2.1"}
+COLLECTION_HEADER = {"User-Agent": "MagicPricing-v2.1", "Content-Type": "application/json", "Accept": "application/json"}
 
 foiling_to_price = {
     "nonfoil": f"{CURRENCY}",
@@ -41,7 +41,7 @@ class Card:
         object.__setattr__(self, "sort_index", self.name)
         if (self.foiling not in foil_options): self.foiling = "nonfoil"
         if (self.call_api):
-            self.response_json = get_api_response(self)
+            self.response_json = get_card_api_response(self)
             self.set_price_from_api()
         else: self.response_json = {}
     
@@ -51,17 +51,18 @@ class Card:
     
     def set_price_from_api(self) -> None:
         # {'usd': '0.45', 'usd_foil': '1.47', 'usd_etched': None, 'eur': '0.75', 'eur_foil': '1.67', 'tix': '2.50'}
-        if (self.response_json == {}): self.response_json = get_api_response(self)
+        if (self.response_json == {}): self.response_json = get_card_api_response(self)
         
         prices = self.response_json["prices"]
         price = prices[foiling_to_price[self.foiling]]
         
         # Bad price handling
         if (price == None and self.foiling != "nonfoiil"): price = prices["usd"] # Use nonfoil price, if it exists
+        # TODO - If no USD price at all, check for another currency and convert (using the conversion at the time of checking)
         if (price == None): self.price = 0.0 # No price, set to 0
         else: self.price = float(price)
        
-class BadCardCallError(Exception):
+class BadCardError(Exception):
     def __init__(self, code: int, card: Card) -> None:
         self.code = code
         self.card = card
@@ -79,16 +80,11 @@ class BadCollectionError(Exception):
     def __str__(self) -> str:
         return f"Got status code {self.code} for collection\nReason: {self.reason}"
 
-def get_api_response(card) -> dict:
+def get_card_api_response(card) -> dict:
     card_url = f"{API_URL}/cards/{card.set}/{card.collector_number}"
-    
-    response = requests.get(card_url, headers = HEADERS)
+    response = requests.get(card_url, headers = BASE_HEADER)
+    if (response.status_code != 200): raise BadCardError(response.status_code, card)
     sleep(API_INDIVIDUAL_CALL_TIMEOUT_MS / 1000)
-    
-    if (response.status_code != 200):
-        print(card_url)
-        raise BadCardCallError(response.status_code, card)
-    
     return response.json()
 
 def create_collection_from_list(card_list: list[Card]) -> dict:
@@ -98,14 +94,9 @@ def create_collection_from_list(card_list: list[Card]) -> dict:
     
 def get_api_collection_response(collection: dict) -> dict:
     api_collection_url = f"{API_URL}/cards/collection"
-    new_header = HEADERS.copy()
-    new_header["Content-Type"] = "application/json"
-    new_header["Accept"] = "application/json"
-    
-    resp = requests.post(api_collection_url, json = collection, headers = HEADERS)
+    resp = requests.post(api_collection_url, json = collection, headers = COLLECTION_HEADER)
     if (resp.status_code != 200): raise BadCollectionError(resp.status_code, resp.json()["details"])
     sleep(API_COLLECTION_CALL_TIMEOUT_MS / 1000)
-    
     return resp.json()
 
 
