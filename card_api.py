@@ -40,6 +40,7 @@ class Card:
     price: float = 0.0
     call_api: bool = False
     response_json: dict = field(default_factory = dict)
+    price_history: list[float] = field(default_factory = list)
     quantity_price: float = 0.0
 
     def __post_init__(self):
