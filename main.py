@@ -28,6 +28,7 @@ args = parser.parse_args()
 
 # TODO - Refactor
 def get_cards_from_access_database(filename: str, sql: str = "") -> list[card_api.Card]:
+    if (".accdb" not in filename): filename += ".accdb"
     if (sql == ""): sql = "SELECT * FROM Cards"
     
     # Connect to database
