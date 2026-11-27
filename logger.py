@@ -27,6 +27,7 @@ class Color:
 
 level_colors = {
     "LOG": Color.GREEN,
+    "INFO": Color.GREEN,
     "ERROR": Color.RED,
     "WARNING": Color.YELLOW,
     "": "" # For no coloring
