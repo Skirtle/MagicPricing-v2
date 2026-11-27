@@ -54,6 +54,7 @@ class Card:
     
     def set_price_from_api(self) -> None:
         """Sets the price of the card. If there the card has not gotten an API response yet, call the API and set the price."""
+        if (self.price != 0.0): return
         if (self.response_json == {}): self.response_json = get_card_api_response(self) # If there is no response, call API for information
         self.price = get_price_from_response(self)       
        
